@@ -39,9 +39,11 @@ def append_detail_csv(link, header, file):
 
     #開檔案
     item_detail = open(file, 'a')
+    details = []
 
     h2 = printarea.select('h2')[0]
     title = h2.text.strip().replace(',', ' ').encode('utf8')
+    details.append(title)
 
     #------------------------------------
     productMemo = soup.select('.product-memo')[0]
@@ -71,7 +73,19 @@ def append_detail_csv(link, header, file):
     allCredit = productAuctionInfo.select('.all-credit')[0]
     credit = allCredit.select('a')[0].text.strip().encode('utf8')
 
-    item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit]))
+    itemDir = soup.select('.dir')[0]
+    a = itemDir.select('a')
+    if len(a) == 5:
+        category1 = a[-3].text.strip().encode('utf8')
+        category2 = a[-2].text.strip().encode('utf8')
+        category3 = a[-1].text.strip().encode('utf8')
+        item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2, category3]))
+
+    if len(a) == 4:
+        category1 = a[-2].text.strip().encode('utf8')
+        category2 = a[-1].text.strip().encode('utf8')
+        item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2]))
+
     item_detail.write('\n')
     item_detail.close()
 
@@ -87,7 +101,7 @@ def getSalesRecord(itemCode, webHeader, file):
     offerLog = soup1.select('.offer-log')[0]
 
     #建header
-    headers = ['出價者', '數量', '日期', '時間']
+    headers = ['商品編號', '出價者', '數量', '日期', '時間']
 
     #建立只有header的csv file
     create_csv(file, headers)
@@ -104,7 +118,7 @@ def getSalesRecord(itemCode, webHeader, file):
         qty = row.findAll('td', {'headers':'quantity'})[0].text.strip().encode('utf8')
         recordDate = row.select('.date')[0].text.strip().encode('utf8')
         recordTime = row.select('.time')[0].text.strip().encode('utf8')
-        record = [userId, qty, recordDate, recordTime]
+        record = [itemCode, userId, qty, recordDate, recordTime]
 
         #開csv檔寫入record
         record_file = open(file, 'a')
@@ -127,7 +141,7 @@ def getSalesRecord(itemCode, webHeader, file):
                     qty = row.findAll('td', {'headers':'quantity'})[0].text.strip().encode('utf8')
                     recordDate = row.select('.date')[0].text.strip().encode('utf8')
                     recordTime = row.select('.time')[0].text.strip().encode('utf8')
-                    record = [userId, qty, recordDate, recordTime]
+                    record = [itemCode, userId, qty, recordDate, recordTime]
 
                     #開csv檔寫入record
                     record_file = open(file, 'a')
@@ -165,8 +179,8 @@ def getCategoryData(url, date, category):
     #設定開始、結束頁面、抓取頁面間隔、每個檔案抓取頁數
     startPageNumber = 1
     endPageNumber = page
-    interval = 1
-    filePageCount = page
+    # interval = 1
+    # filePageCount = page
 
     #建立資料夾及檔案
     # date = '0215'
@@ -180,26 +194,31 @@ def getCategoryData(url, date, category):
     if not os.path.exists(recordTargetDir):
         os.makedirs(recordTargetDir)
 
-    file = datailTargetDir+'items_page_%d_%d_interval%d.csv'%(startPageNumber, startPageNumber+(filePageCount*interval)-1, interval)
+    # file = datailTargetDir+'items_page_%d_%d_interval%d.csv'%(startPageNumber, startPageNumber+(filePageCount*interval)-1, interval) #有用"抓固定頁數存檔及跳頁面抓"
+    itemDetailFile = datailTargetDir+'items_page_%d_%d.csv'%(startPageNumber, endPageNumber)
+    salesRecordFile = recordTargetDir+'salesRecord_page_%d_%d.csv'%(startPageNumber, endPageNumber)
 
     #用header建csv檔
-    itemDetailCsvHeaders = ["物品名稱", "商品編號", "物品所在地", "上架日期", "上架時間", "商品價格", "已賣數量", "運費", "賣家", "賣場首頁", "評價分數"]
+    itemDetailCsvHeaders = ["物品名稱", "商品編號", "物品所在地", "上架日期", "上架時間", "商品價格", "已賣數量", "運費", "賣家", "賣場首頁", "評價分數", "分類1", "分類2", "分類3"]
+    salesRecordCsvHeaders = ['商品編號', '出價者', '數量', '日期', '時間']
 
-    create_csv(file, itemDetailCsvHeaders)
+    create_csv(itemDetailFile, itemDetailCsvHeaders)
+    create_csv(salesRecordFile, salesRecordCsvHeaders)
 
     #開始抓
     print 'Capture from page %d to %d.'%(startPageNumber, endPageNumber)
 
-    for p in range(startPageNumber, endPageNumber+1, interval):
+    # for p in range(startPageNumber, endPageNumber+1, interval): #有用"抓固定頁數存檔及跳頁面抓"
+    for p in range(startPageNumber, endPageNumber+1):
         pageStartTime = int(round(time.time() * 1000)) #time以秒為單位，*1000換成millisec
         errorcount = 0
 
         while True:
             try:
                 #分段存檔
-                if (p-startPageNumber) % (filePageCount*interval) == 0:
-                    file = datailTargetDir+'items_page_%d_%d_interval%d.csv'%(p, p+(filePageCount*interval)-1, interval)
-                    create_csv(file, itemDetailCsvHeaders)
+                # if (p-startPageNumber) % (filePageCount*interval) == 0:
+                #     file = datailTargetDir+'items_page_%d_%d_interval%d.csv'%(p, p+(filePageCount*interval)-1, interval)
+                #     create_csv(file, itemDetailCsvHeaders)
 
                 #存取商品清單頁面
                 res1 = requests.get(pageurl%p, headers=header)
@@ -223,12 +242,10 @@ def getCategoryData(url, date, category):
                             link = [tag['href'] for tag in row.select('.image')[0].select('a')][0]
                             itemCode = getItemCode(link).encode('utf8') #???這邊一定要加encode???
 
-                            append_detail_csv(link, header, file) #???如何能在後面當掉情況下不做這項???
+                            append_detail_csv(link, header, itemDetailFile) #???如何能在後面當掉情況下不做這項???
                             print 'item %s detail saved.'%itemCode
 
-                            recordFile = recordTargetDir + '%s.csv'%itemCode
-                            getSalesRecord(itemCode, header, recordFile)
-
+                            getSalesRecord(itemCode, header, salesRecordFile)
                             print 'Sales record %s saved.'%itemCode
 
                 #抓"全部商品"方塊
@@ -248,12 +265,10 @@ def getCategoryData(url, date, category):
                             link = [tag['href'] for tag in row.select('.image')[0].select('a')][0]
                             itemCode = getItemCode(link).encode('utf8')
 
-                            append_detail_csv(link, header, file)
+                            append_detail_csv(link, header, itemDetailFile)
                             print 'item %s detail saved.'%itemCode
 
-                            recordFile = recordTargetDir + '%s.csv'%itemCode
-                            getSalesRecord(itemCode, header, recordFile)
-
+                            getSalesRecord(itemCode, header, salesRecordFile)
                             print 'Sales record %s saved.'%itemCode
 
             except ConnectionError as e:
