@@ -85,6 +85,7 @@ def append_detail_csv(link, header, file):
         category1 = a[-2].text.strip().encode('utf8')
         category2 = a[-1].text.strip().encode('utf8')
         item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2]))
+        item_detail.write(',')
 
     item_detail.write('\n')
     item_detail.close()
@@ -99,17 +100,6 @@ def getSalesRecord(itemCode, webHeader, file):
     offerLog_res.encoding = 'big5'
     soup1 = BeautifulSoup(offerLog_res.text)
     offerLog = soup1.select('.offer-log')[0]
-
-    #建header
-    headers = ['商品編號', '出價者', '數量', '日期', '時間']
-
-    #建立只有header的csv file
-    create_csv(file, headers)
-    # if not os.path.exists(file):
-    #     create_csv(file, headers)
-    # else:
-    #     os.remove(file)
-    #     create_csv(file, headers)
 
     #get sales record
     tr = offerLog.select('tr')[1:]
@@ -305,21 +295,21 @@ def getCategoryData(url, date, category):
         time.sleep(randint(1,10)*0.1)
     print 'Job done!'
 
-url0='http://class.ruten.com.tw/category/sub00.php?c=001200070006'
+url0='http://class.ruten.com.tw/category/sub00.php?c=00120007'
 
 header = {
 'Cookie':'ruten_ad_20150108-122732_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A18%20GMT; ruten_ad_20150108-122732=1; ruten_ad_20150130-164849_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A48%20GMT; ruten_ad_20150130-164849=1; _ts_id=3D04360E3C083E0D3D; _gat=1; _ga=GA1.3.1515021042.1422859158',
 'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36'}
 
-date = '0218'
+date = '0225'
 
 errorcount = 0
 while True:
     try:
 
         li = getCataloguesList(url0, header)
-        startCategory = 1
-        endCategory = 1
+        startCategory = 2
+        endCategory = 17
 
         for i in range(startCategory-1, endCategory):
             row = li[i]
