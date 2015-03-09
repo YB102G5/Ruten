@@ -18,13 +18,9 @@ def getItemCode(link): #unicode item code
     itemCode = "%s"%(m.group('number'))
     return itemCode
 
-def create_csv(file, csvHeaders):
-    csvHeader = ','.join(csvHeaders)
+def create_csv(file):
     #建檔案
     item_detail = open(file, 'w')
-    #寫入header
-    item_detail.write(csvHeader)
-    item_detail.write('\n')
     item_detail.close()
 
     print 'csv file created.'
@@ -175,8 +171,8 @@ def getCategoryData(url, date, category):
     #建立資料夾及檔案
     # date = '0215'
     # category = '洗面乳(膠、露、霜)'
-    datailTargetDir = 'item_detail/%s/%s/'%(date, category)
-    recordTargetDir = 'sales_record/%s/%s/'%(date, category)
+    datailTargetDir = 'item_detail/%s/'%date
+    recordTargetDir = 'sales_record/%s/'%date
 
     if not os.path.exists(datailTargetDir):
         os.makedirs(datailTargetDir)
@@ -185,15 +181,15 @@ def getCategoryData(url, date, category):
         os.makedirs(recordTargetDir)
 
     # file = datailTargetDir+'items_page_%d_%d_interval%d.csv'%(startPageNumber, startPageNumber+(filePageCount*interval)-1, interval) #有用"抓固定頁數存檔及跳頁面抓"
-    itemDetailFile = datailTargetDir+'items_page_%d_%d.csv'%(startPageNumber, endPageNumber)
+    itemDetailFile = datailTargetDir+'items_page_%d_%d_.csv'%(startPageNumber, endPageNumber)
     salesRecordFile = recordTargetDir+'salesRecord_page_%d_%d.csv'%(startPageNumber, endPageNumber)
 
-    #用header建csv檔
-    itemDetailCsvHeaders = ["物品名稱", "商品編號", "物品所在地", "上架日期", "上架時間", "商品價格", "已賣數量", "運費", "賣家", "賣場首頁", "評價分數", "分類1", "分類2", "分類3"]
-    salesRecordCsvHeaders = ['商品編號', '出價者', '數量', '日期', '時間']
+    # #用header建csv檔
+    # itemDetailCsvHeaders = ["物品名稱", "商品編號", "物品所在地", "上架日期", "上架時間", "商品價格", "已賣數量", "運費", "賣家", "賣場首頁", "評價分數", "分類1", "分類2", "分類3"]
+    # salesRecordCsvHeaders = ['商品編號', '出價者', '數量', '日期', '時間']
 
-    create_csv(itemDetailFile, itemDetailCsvHeaders)
-    create_csv(salesRecordFile, salesRecordCsvHeaders)
+    create_csv(itemDetailFile)
+    create_csv(salesRecordFile)
 
     #開始抓
     print 'Capture from page %d to %d.'%(startPageNumber, endPageNumber)
@@ -295,21 +291,21 @@ def getCategoryData(url, date, category):
         time.sleep(randint(1,10)*0.1)
     print 'Job done!'
 
-url0='http://class.ruten.com.tw/category/sub00.php?c=00120007'
+url0='http://class.ruten.com.tw/category/sub00.php?c=001200070005'
 
 header = {
 'Cookie':'ruten_ad_20150108-122732_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A18%20GMT; ruten_ad_20150108-122732=1; ruten_ad_20150130-164849_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A48%20GMT; ruten_ad_20150130-164849=1; _ts_id=3D04360E3C083E0D3D; _gat=1; _ga=GA1.3.1515021042.1422859158',
 'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36'}
 
-date = '0225'
+date = '0307'
 
 errorcount = 0
 while True:
     try:
 
         li = getCataloguesList(url0, header)
-        startCategory = 2
-        endCategory = 17
+        startCategory = 3
+        endCategory = 3
 
         for i in range(startCategory-1, endCategory):
             row = li[i]
