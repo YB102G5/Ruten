@@ -25,7 +25,7 @@ def create_csv(file):
 
     print 'csv file created.'
 
-def append_detail_content(link, header, itemDetailContent):
+def append_detail_csv(link, header, file):
     itemCode = getItemCode(link).encode('utf8')
 
     request_get = requests.get(link, headers=header)
@@ -33,8 +33,13 @@ def append_detail_content(link, header, itemDetailContent):
     soup = BeautifulSoup(request_get.text)
     printarea = soup.select('.auction-data')[0]
 
+    #開檔案
+    item_detail = open(file, 'a')
+    details = []
+
     h2 = printarea.select('h2')[0]
     title = h2.text.strip().replace(',', ' ').encode('utf8')
+    details.append(title)
 
     #------------------------------------
     productMemo = soup.select('.product-memo')[0]
@@ -70,27 +75,36 @@ def append_detail_content(link, header, itemDetailContent):
         category1 = a[-3].text.strip().encode('utf8')
         category2 = a[-2].text.strip().encode('utf8')
         category3 = a[-1].text.strip().encode('utf8')
-        itemDetailContent += ','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2, category3])
+        item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2, category3]))
 
     if len(a) == 4:
         category1 = a[-2].text.strip().encode('utf8')
         category2 = a[-1].text.strip().encode('utf8')
-        itemDetailContent += ','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2])
+        item_detail.write(','.join([title, itemCode, location, uploadDate, uploadTime, price, soldCount, shipFare, sellerId, sellerIndex, credit, category1, category2]))
+        item_detail.write(',')
 
-    itemDetailContent += '\n'
-    return itemDetailContent
+    item_detail.write('\n')
+    item_detail.close()
 
-    print 'Detail content appended.'
+    print 'detail csv file appended.'
 
-def getSalesRecord(itemCode, webHeader, salesRecordContent):
-    offerLogUrl = 'http://goods.ruten.com.tw/item/history_full.php?'+ itemCode.encode('utf8') +'&page=%d#log' #如何代換其中一個%為已知另一個%維持未知？
-    n = 1
+def getSalesRecord(itemCode, webHeader, saleRecordContent):
+    offerLogUrl = 'http://goods.ruten.com.tw/item/historymore?%s&more'%itemCode.encode('utf8') #如何代換其中一個%為已知另一個%維持未知？
 
-    offerLog_res = requests.get(offerLogUrl%n, headers=webHeader)
-    offerLog_res.encoding = 'big5'
+    offerLog_res = requests.get(offerLogUrl, headers=webHeader)
+    offerLog_res.encoding = 'utf8'
     soup1 = BeautifulSoup(offerLog_res.text)
-    offerLog = soup1.select('.offer-log')[0]
-
+    records = soup1.select('.t1320')
+    for record in records:
+        font = record.select('font')
+        if len(font) == 3:
+            date = font[0].text.split()[0].encode('utf8')
+            time = font[0].text.split()[1].encode('utf8')
+            id = font[1].text.strip().encode('utf8')
+            qty = font[2].text.encode('utf8')
+            ############################################################################################################
+            #寫到這裡
+            ############################################################################################################
     #get sales record
     tr = offerLog.select('tr')[1:]
     for row in tr:
@@ -100,8 +114,11 @@ def getSalesRecord(itemCode, webHeader, salesRecordContent):
         recordTime = row.select('.time')[0].text.strip().encode('utf8')
         record = [itemCode, userId, qty, recordDate, recordTime]
 
-        salesRecordContent += ','.join(record)
-        salesRecordContent += '\n'
+        #開csv檔寫入record
+        record_file = open(file, 'a')
+        record_file.write(','.join(record))
+        record_file.write('\n')
+        record_file.close()
 
     #
     while len(offerLog.select('.msg')) == 0:
@@ -120,13 +137,14 @@ def getSalesRecord(itemCode, webHeader, salesRecordContent):
                     recordTime = row.select('.time')[0].text.strip().encode('utf8')
                     record = [itemCode, userId, qty, recordDate, recordTime]
 
-                    salesRecordContent += ','.join(record)
-                    salesRecordContent += '\n'
+                    #開csv檔寫入record
+                    record_file = open(file, 'a')
+                    record_file.write(','.join(record))
+                    record_file.write('\n')
+                    record_file.close()
                 break #繼續while
         else: #正常執行完for loop才會執行這個區塊?
             break #break while
-
-    return salesRecordContent
 
 def getCategoryData(url, date, category):
     # url='http://class.ruten.com.tw/category/sub00.php?c=0012000700120001' #還要改category
@@ -178,10 +196,8 @@ def getCategoryData(url, date, category):
     # itemDetailCsvHeaders = ["物品名稱", "商品編號", "物品所在地", "上架日期", "上架時間", "商品價格", "已賣數量", "運費", "賣家", "賣場首頁", "評價分數", "分類1", "分類2", "分類3"]
     # salesRecordCsvHeaders = ['商品編號', '出價者', '數量', '日期', '時間']
 
-    # create_csv(itemDetailFile)
-    # create_csv(salesRecordFile)
-    itemDetailContent = ''
-    salesRecordContent = ''
+    create_csv(itemDetailFile)
+    create_csv(salesRecordFile)
 
     #開始抓
     print 'Capture from page %d to %d.'%(startPageNumber, endPageNumber)
@@ -220,10 +236,10 @@ def getCategoryData(url, date, category):
                             link = [tag['href'] for tag in row.select('.image')[0].select('a')][0]
                             itemCode = getItemCode(link).encode('utf8') #???這邊一定要加encode???
 
-                            itemDetailContent = append_detail_content(link, header, itemDetailContent) #???如何能在後面當掉情況下不做這項???
+                            append_detail_csv(link, header, itemDetailFile) #???如何能在後面當掉情況下不做這項???
                             print 'item %s detail saved.'%itemCode
 
-                            salesRecordContent = getSalesRecord(itemCode, header, salesRecordContent)
+                            getSalesRecord(itemCode, header, salesRecordFile)
                             print 'Sales record %s saved.'%itemCode
 
                 #抓"全部商品"方塊
@@ -243,10 +259,10 @@ def getCategoryData(url, date, category):
                             link = [tag['href'] for tag in row.select('.image')[0].select('a')][0]
                             itemCode = getItemCode(link).encode('utf8')
 
-                            itemDetailContent = append_detail_content(link, header, itemDetailContent) #???如何能在後面當掉情況下不做這項???
+                            append_detail_csv(link, header, itemDetailFile)
                             print 'item %s detail saved.'%itemCode
 
-                            salesRecordContent = getSalesRecord(itemCode, header, salesRecordContent)
+                            getSalesRecord(itemCode, header, salesRecordFile)
                             print 'Sales record %s saved.'%itemCode
 
             except ConnectionError as e:
@@ -281,13 +297,6 @@ def getCategoryData(url, date, category):
         print '---------------------------------Page %d done.---------------------------------'%p
         print 'Period of this page: %dms.'%period
         time.sleep(randint(1,10)*0.1)
-
-    f1 = open(itemDetailFile, 'w')
-    f1.write(itemDetailContent)
-    f1.close()
-    f2 = open(salesRecordFile, 'w')
-    f2.write(salesRecordContent)
-    f2.close()
     print 'Job done!'
 
 url0='http://class.ruten.com.tw/category/sub00.php?c=001200070005'
@@ -296,7 +305,7 @@ header = {
 'Cookie':'ruten_ad_20150108-122732_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A18%20GMT; ruten_ad_20150108-122732=1; ruten_ad_20150130-164849_expire=Tue%2C%2003%20Feb%202015%2006%3A39%3A48%20GMT; ruten_ad_20150130-164849=1; _ts_id=3D04360E3C083E0D3D; _gat=1; _ga=GA1.3.1515021042.1422859158',
 'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36'}
 
-date = '0327'
+date = '0307'
 
 errorcount = 0
 while True:
